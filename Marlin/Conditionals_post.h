@@ -652,7 +652,7 @@
   #if FAN_COUNT == 0
     #undef PROBING_FANS_OFF
   #endif
-  #define QUIET_PROBING (ENABLED(PROBING_HEATERS_OFF) || ENABLED(PROBING_FANS_OFF))
+  #define QUIET_PROBING (HAS_BED_PROBE && (ENABLED(PROBING_HEATERS_OFF) || ENABLED(PROBING_FANS_OFF)))
 
   /**
    * Servos and probes
@@ -846,5 +846,10 @@
 
   // Add commands that need sub-codes to this list
   #define USE_GCODE_SUBCODES ENABLED(G38_PROBE_TARGET)
+
+  // MESH_BED_LEVELING overrides PROBE_MANUALLY
+  #if ENABLED(MESH_BED_LEVELING)
+    #undef PROBE_MANUALLY
+  #endif
 
 #endif // CONDITIONALS_POST_H

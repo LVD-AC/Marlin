@@ -1344,9 +1344,8 @@ void MarlinSettings::reset() {
     #else
       #define LINEAR_UNIT(N) N
       #define VOLUMETRIC_UNIT(N) N
-      SERIAL_ECHOLNPGM("  G21 ; Units in mm\n");
+      SERIAL_ECHOLNPGM("  G21    ; Units in mm");
     #endif
-    SERIAL_EOL;
 
     #if ENABLED(ULTIPANEL)
 
@@ -1361,11 +1360,12 @@ void MarlinSettings::reset() {
         serialprintPGM(parser.temp_units_name());
       #else
         #define TEMP_UNIT(N) N
-        SERIAL_ECHOLNPGM("  M149 C ; Units in Celsius\n");
+        SERIAL_ECHOLNPGM("  M149 C ; Units in Celsius");
       #endif
-      SERIAL_EOL;
 
     #endif
+
+    SERIAL_EOL;
 
     /**
      * Volumetric extrusion M200
@@ -1525,7 +1525,7 @@ void MarlinSettings::reset() {
         SERIAL_ECHOLNPGM("Mesh Bed Leveling:");
       }
       CONFIG_ECHO_START;
-      SERIAL_ECHOPAIR("  M420 S", mbl.has_mesh() ? 1 : 0);
+      SERIAL_ECHOPAIR("  M420 S", leveling_is_valid() ? 1 : 0);
       #if ENABLED(ENABLE_LEVELING_FADE_HEIGHT)
         SERIAL_ECHOPAIR(" Z", LINEAR_UNIT(planner.z_fade_height));
       #endif
@@ -1549,7 +1549,7 @@ void MarlinSettings::reset() {
         SERIAL_ECHOLNPGM(":");
       }
       CONFIG_ECHO_START;
-      SERIAL_ECHOPAIR("  M420 S", ubl.state.active ? 1 : 0);
+      SERIAL_ECHOPAIR("  M420 S", leveling_is_active() ? 1 : 0);
       #if ENABLED(ENABLE_LEVELING_FADE_HEIGHT)
         SERIAL_ECHOPAIR(" Z", planner.z_fade_height);
       #endif
@@ -1576,7 +1576,7 @@ void MarlinSettings::reset() {
         SERIAL_ECHOLNPGM("Auto Bed Leveling:");
       }
       CONFIG_ECHO_START;
-      SERIAL_ECHOPAIR("  M420 S", planner.abl_enabled ? 1 : 0);
+      SERIAL_ECHOPAIR("  M420 S", leveling_is_active() ? 1 : 0);
       #if ENABLED(ENABLE_LEVELING_FADE_HEIGHT)
         SERIAL_ECHOPAIR(" Z", LINEAR_UNIT(planner.z_fade_height));
       #endif

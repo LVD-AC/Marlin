@@ -48,7 +48,7 @@
 #endif
 
 void idle(
-  #if ENABLED(FILAMENT_CHANGE_FEATURE)
+  #if ENABLED(ADVANCED_PAUSE_FEATURE)
     bool no_stepper_sleep = false  // pass true to keep steppers from disabling on timeout
   #endif
 );
@@ -217,8 +217,8 @@ extern bool volumetric_enabled;
 extern int flow_percentage[EXTRUDERS]; // Extrusion factor for each extruder
 extern float filament_size[EXTRUDERS]; // cross-sectional area of filament (in millimeters), typically around 1.75 or 2.85, 0 disables the volumetric calculations for the extruder.
 extern float volumetric_multiplier[EXTRUDERS]; // reciprocal of cross-sectional area of filament (in square millimeters), stored this way to reduce computational burden in planner
-extern bool axis_known_position[XYZ]; // axis[n].is_known
-extern bool axis_homed[XYZ]; // axis[n].is_homed
+extern bool axis_known_position[XYZ];
+extern bool axis_homed[XYZ];
 extern volatile bool wait_for_heatup;
 
 #if HAS_RESUME_CONTINUE
@@ -310,7 +310,6 @@ extern float soft_endstop_min[XYZ], soft_endstop_max[XYZ];
   extern float bilinear_grid_factor[2],
                z_values[GRID_MAX_POINTS_X][GRID_MAX_POINTS_Y];
   float bilinear_z_offset(const float logical[XYZ]);
-  void set_bed_leveling_enabled(bool enable=true);
 #endif
 
 #if ENABLED(AUTO_BED_LEVELING_UBL)
@@ -319,6 +318,9 @@ extern float soft_endstop_min[XYZ], soft_endstop_max[XYZ];
 #endif
 
 #if HAS_LEVELING
+  bool leveling_is_valid();
+  bool leveling_is_active();
+  void set_bed_leveling_enabled(const bool enable=true);
   void reset_bed_level();
 #endif
 
@@ -369,8 +371,8 @@ extern float soft_endstop_min[XYZ], soft_endstop_max[XYZ];
   extern int meas_delay_cm;            // Delay distance
 #endif
 
-#if ENABLED(FILAMENT_CHANGE_FEATURE)
-  extern FilamentChangeMenuResponse filament_change_menu_response;
+#if ENABLED(ADVANCED_PAUSE_FEATURE)
+  extern AdvancedPauseMenuResponse advanced_pause_menu_response;
 #endif
 
 #if ENABLED(PID_EXTRUSION_SCALING)
