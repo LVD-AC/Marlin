@@ -2323,7 +2323,7 @@ void kill_screen(const char* lcd_msg) {
       MENU_BACK(MSG_MAIN);
       #if ENABLED(DELTA_AUTO_CALIBRATION)
         MENU_ITEM(gcode, MSG_DELTA_AUTO_CALIBRATE, PSTR("G33"));
-        MENU_ITEM(gcode, MSG_DELTA_HEIGHT_CALIBRATE, PSTR("G33 P1 A"));
+        MENU_ITEM(gcode, MSG_DELTA_HEIGHT_CALIBRATE, PSTR("G33 P1"));
       #endif
       MENU_ITEM(submenu, MSG_AUTO_HOME, _lcd_delta_calibrate_home);
       if (axis_homed[Z_AXIS]) {
@@ -4043,12 +4043,12 @@ void lcd_update() {
                 else if (encoderStepRate >= ENCODER_10X_STEPS_PER_SEC) encoderMultiplier = 10;
 
                 #if ENABLED(ENCODER_RATE_MULTIPLIER_DEBUG)
-                  SERIAL_ECHO_START;
+                  SERIAL_ECHO_START();
                   SERIAL_ECHOPAIR("Enc Step Rate: ", encoderStepRate);
                   SERIAL_ECHOPAIR("  Multiplier: ", encoderMultiplier);
                   SERIAL_ECHOPAIR("  ENCODER_10X_STEPS_PER_SEC: ", ENCODER_10X_STEPS_PER_SEC);
                   SERIAL_ECHOPAIR("  ENCODER_100X_STEPS_PER_SEC: ", ENCODER_100X_STEPS_PER_SEC);
-                  SERIAL_EOL;
+                  SERIAL_EOL();
                 #endif // ENCODER_RATE_MULTIPLIER_DEBUG
               }
 
