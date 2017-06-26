@@ -45,6 +45,9 @@
     void lcd_mesh_edit_setup(float initial);
     float lcd_mesh_edit();
     void lcd_z_offset_edit_setup(float);
+    #if ENABLED(DOGLCD)
+      extern void _lcd_ubl_output_map_lcd();
+    #endif
     float lcd_z_offset_edit();
   #endif
 
@@ -53,6 +56,9 @@
   extern float probe_pt(const float &x, const float &y, bool, int);
   extern bool set_probe_deployed(bool);
   extern void set_bed_leveling_enabled(bool);
+  extern bool ubl_lcd_map_control;
+  typedef void (*screenFunc_t)();
+  extern void lcd_goto_screen(screenFunc_t screen, const uint32_t encoder = 0);
 
   #define SIZE_OF_LITTLE_RAISE 1
   #define BIG_RAISE_NOT_NEEDED 0
@@ -492,7 +498,7 @@
 
             if (parser.seen('B')) {
               g29_card_thickness = parser.has_value() ? parser.value_float() : measure_business_card_thickness(height);
-              if (fabs(g29_card_thickness) > 1.5) {
+              if (FABS(g29_card_thickness) > 1.5) {
                 SERIAL_PROTOCOLLNPGM("?Error in Business Card measurement.");
                 return;
               }
@@ -556,7 +562,7 @@
                   // P3.13 1000X distance weighting, approaches simple average of nearest points
 
                   const float weight_power  = (cvf - 3.10) * 100.0,  // 3.12345 -> 2.345
-                              weight_factor = weight_power ? pow(10.0, weight_power) : 0;
+                              weight_factor = weight_power ? POW(10.0, weight_power) : 0;
                   smart_fill_wlsf(weight_factor);
                 }
                 break;
@@ -768,7 +774,7 @@
     SERIAL_ECHO_F(mean, 6);
     SERIAL_EOL();
 
-    const float sigma = sqrt(sum_of_diff_squared / (n + 1));
+    const float sigma = SQRT(sum_of_diff_squared / (n + 1));
     SERIAL_ECHOPGM("Standard Deviation: ");
     SERIAL_ECHO_F(sigma, 6);
     SERIAL_EOL();
@@ -1191,7 +1197,7 @@
     #endif
 
     g29_map_type = parser.seen('T') && parser.has_value() ? parser.value_int() : 0;
-    if (!WITHIN(g29_map_type, 0, 1)) {
+    if (!WITHIN(g29_map_type, 0, 2)) {
       SERIAL_PROTOCOLLNPGM("Invalid map type.\n");
       return UBL_ERR;
     }
@@ -1502,7 +1508,7 @@
         do_blocking_move_to_z(Z_CLEARANCE_BETWEEN_PROBES);    // Move the nozzle to where we are going to edit
         do_blocking_move_to_xy(LOGICAL_X_POSITION(rawx), LOGICAL_Y_POSITION(rawy));
 
-        new_z = floor(new_z * 1000.0) * 0.001; // Chop off digits after the 1000ths place
+        new_z = FLOOR(new_z * 1000.0) * 0.001; // Chop off digits after the 1000ths place
 
         KEEPALIVE_STATE(PAUSED_FOR_USER);
         has_control_of_lcd_panel = true;
@@ -1535,8 +1541,8 @@
         while (ubl_lcd_clicked()) { // debounce and watch for abort
           idle();
           if (ELAPSED(millis(), nxt)) {
+            ubl_lcd_map_control = false;
             lcd_return_to_status();
-            //SERIAL_PROTOCOLLNPGM("\nFine Tuning of Mesh Stopped.");
             do_blocking_move_to_z(Z_CLEARANCE_BETWEEN_PROBES);
             LCD_MESSAGEPGM(MSG_EDITING_STOPPED);
 
@@ -1567,6 +1573,13 @@
 
       LCD_MESSAGEPGM(MSG_UBL_DONE_EDITING_MESH);
       SERIAL_ECHOLNPGM("Done Editing Mesh");
+
+      if (ubl_lcd_map_control) {
+        #if ENABLED(DOGLCD)
+          lcd_goto_screen(_lcd_ubl_output_map_lcd);
+        #endif
+      }
+      else lcd_return_to_status();
     }
   #endif
 
