@@ -50,6 +50,10 @@
 
 #include <U8glib.h>
 
+#if ENABLED(AUTO_BED_LEVELING_UBL)
+  #include "ubl.h"
+#endif
+
 #if ENABLED(SHOW_BOOTSCREEN) && ENABLED(SHOW_CUSTOM_BOOTSCREEN)
   #include "_Bootscreen.h"
 #endif
@@ -342,7 +346,7 @@ void lcd_implementation_clear() { } // Automatically cleared by Picture Loop
 // Status Screen
 //
 
-FORCE_INLINE void _draw_centered_temp(const int temp, const uint8_t x, const uint8_t y) {
+FORCE_INLINE void _draw_centered_temp(const int16_t temp, const uint8_t x, const uint8_t y) {
   const uint8_t degsize = 6 * (temp >= 100 ? 3 : temp >= 10 ? 2 : 1); // number's pixel width
   u8g.setPrintPos(x - (18 - degsize) / 2, y); // move left if shorter
   lcd_print(itostr3(temp));
@@ -404,7 +408,7 @@ FORCE_INLINE void _draw_axis_label(const AxisEnum axis, const char* const pstr, 
   }
 }
 
-inline void lcd_implementation_status_message() {
+inline void lcd_implementation_status_message(const bool blink) {
   #if ENABLED(STATUS_MESSAGE_SCROLLING)
     static bool last_blink = false;
     const uint8_t slen = lcd_strlen(lcd_status_message);
@@ -420,10 +424,10 @@ inline void lcd_implementation_status_message() {
           lcd_print_utf(stat);                                  // The string leaves space
           chars -= slen - status_scroll_pos;                    // Amount of space left
         }
-        lcd.print('.');                                         // Always at 1+ spaces left, draw a dot
+        u8g.print('.');                                         // Always at 1+ spaces left, draw a dot
         if (--chars) {
           if (status_scroll_pos < slen + 1)                     // Draw a second dot if there's space
-            --chars, lcd.print('.');
+            --chars, u8g.print('.');
           if (chars) lcd_print_utf(lcd_status_message, chars);  // Print a second copy of the message
         }
       }
@@ -480,7 +484,7 @@ static void lcd_implementation_status_screen() {
     #if HAS_FAN0
       if (PAGE_CONTAINS(20, 27)) {
         // Fan
-        const int per = ((fanSpeeds[0] + 1) * 100) / 256;
+        const int16_t per = ((fanSpeeds[0] + 1) * 100) / 256;
         if (per) {
           u8g.setPrintPos(104, 27);
           lcd_print(itostr3(per));
@@ -529,7 +533,7 @@ static void lcd_implementation_status_screen() {
       if (PAGE_CONTAINS(50, 51 - (TALL_FONT_CORRECTION)))     // 50-51 (or just 50)
         u8g.drawBox(
           PROGRESS_BAR_X + 1, 50,
-          (unsigned int)((PROGRESS_BAR_WIDTH - 2) * card.percentDone() * 0.01), 2 - (TALL_FONT_CORRECTION)
+          (uint16_t)((PROGRESS_BAR_WIDTH - 2) * card.percentDone() * 0.01), 2 - (TALL_FONT_CORRECTION)
         );
 
       //
@@ -684,12 +688,12 @@ static void lcd_implementation_status_screen() {
 
   #define STATUS_BASELINE (55 + INFO_FONT_HEIGHT)
 
-  if (PAGE_CONTAINS(STATUS_BASELINE + 1 - INFO_FONT_HEIGHT, STATUS_BASELINE)) {
+  if (PAGE_CONTAINS(STATUS_BASELINE - (INFO_FONT_HEIGHT - 1), STATUS_BASELINE)) {
     u8g.setPrintPos(0, STATUS_BASELINE);
 
     #if ENABLED(FILAMENT_LCD_DISPLAY) && ENABLED(SDSUPPORT)
       if (PENDING(millis(), previous_lcd_status_ms + 5000UL)) {  //Display both Status message line and Filament display on the last line
-        lcd_implementation_status_message();
+        lcd_implementation_status_message(blink);
       }
       else {
         lcd_printPGM(PSTR(LCD_STR_FILAM_DIA));
@@ -701,7 +705,7 @@ static void lcd_implementation_status_screen() {
         u8g.print('%');
       }
     #else
-      lcd_implementation_status_message();
+      lcd_implementation_status_message(blink);
     #endif
   }
 }
@@ -843,7 +847,8 @@ static void lcd_implementation_status_screen() {
     } \
     typedef void _name##_void
 
-  DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(int, int3, itostr3);
+  DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(int16_t, int3, itostr3);
+  DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(uint8_t, int8, i8tostr3);
   DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(float, float3, ftostr3);
   DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(float, float32, ftostr32);
   DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(float, float43, ftostr43sign);
@@ -851,7 +856,7 @@ static void lcd_implementation_status_screen() {
   DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(float, float51, ftostr51sign);
   DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(float, float52, ftostr52sign);
   DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(float, float62, ftostr62rj);
-  DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(unsigned long, long5, ftostr5rj);
+  DEFINE_LCD_IMPLEMENTATION_DRAWMENU_SETTING_EDIT_TYPE(uint32_t, long5, ftostr5rj);
 
   #define lcd_implementation_drawmenu_setting_edit_bool(sel, row, pstr, pstr2, data) lcd_implementation_drawmenu_setting_edit_generic_P(sel, row, pstr, (*(data))?PSTR(MSG_ON):PSTR(MSG_OFF))
   #define lcd_implementation_drawmenu_setting_edit_callback_bool(sel, row, pstr, pstr2, data, callback) lcd_implementation_drawmenu_setting_edit_generic_P(sel, row, pstr, (*(data))?PSTR(MSG_ON):PSTR(MSG_OFF))
@@ -866,7 +871,7 @@ static void lcd_implementation_status_screen() {
     #if ENABLED(USE_BIG_EDIT_FONT)
       uint8_t lcd_width, char_width;
       if (labellen <= LCD_WIDTH_EDIT - 1) {
-        if (labellen >= LCD_WIDTH_EDIT - vallen) rows = 2;
+        if (labellen + vallen + 2 >= LCD_WIDTH_EDIT) rows = 2;
         lcd_width = LCD_WIDTH_EDIT + 1;
         char_width = DOG_CHAR_WIDTH_EDIT;
         lcd_setFont(FONT_MENU_EDIT);
@@ -885,16 +890,21 @@ static void lcd_implementation_status_screen() {
     const uint8_t segmentHeight = u8g.getHeight() / (rows + 1); // 1 / (rows+1) = 1/2 or 1/3
     uint8_t baseline = segmentHeight + (DOG_CHAR_HEIGHT_EDIT + 1) / 2;
 
-    if (PAGE_CONTAINS(baseline + 1 - (DOG_CHAR_HEIGHT_EDIT), baseline)) {
+    bool onpage = PAGE_CONTAINS(baseline + 1 - (DOG_CHAR_HEIGHT_EDIT), baseline);
+    if (onpage) {
       u8g.setPrintPos(0, baseline);
       lcd_printPGM(pstr);
     }
 
     if (value != NULL) {
-      baseline += (rows - 1) * segmentHeight;
-      if (PAGE_CONTAINS(baseline + 1 - (DOG_CHAR_HEIGHT_EDIT), baseline)) {
-        u8g.print(':');
-        u8g.setPrintPos((lcd_width - 1 - vallen) * char_width, baseline);
+      u8g.print(':');
+      if (rows == 2) {
+        baseline += segmentHeight;
+        onpage = PAGE_CONTAINS(baseline + 1 - (DOG_CHAR_HEIGHT_EDIT), baseline);
+      }
+      if (onpage) {
+        u8g.setPrintPos(((lcd_width - 1) - (vallen + 1)) * char_width, baseline); // Right-justified, leaving padded by spaces
+        u8g.print(' '); // overwrite char if value gets shorter
         lcd_print(value);
       }
     }
@@ -928,6 +938,95 @@ static void lcd_implementation_status_screen() {
     #define lcd_implementation_drawmenu_sddirectory(sel, row, pstr, filename, longFilename) _drawmenu_sd(sel, row, pstr, filename, longFilename, true)
 
   #endif // SDSUPPORT
+
+  #if ENABLED(AUTO_BED_LEVELING_UBL)
+
+    /**
+     * UBL LCD "radar" map data
+     */
+    #define MAP_UPPER_LEFT_CORNER_X 35  // These probably should be moved to the .h file  But for now,
+    #define MAP_UPPER_LEFT_CORNER_Y  8  // it is easier to play with things having them here
+    #define MAP_MAX_PIXELS_X        53
+    #define MAP_MAX_PIXELS_Y        49
+
+    void lcd_implementation_ubl_plot(const uint8_t x_plot, const uint8_t y_plot) {
+      // Scale the box pixels appropriately
+      uint8_t x_map_pixels = ((MAP_MAX_PIXELS_X - 4) / (GRID_MAX_POINTS_X)) * (GRID_MAX_POINTS_X),
+              y_map_pixels = ((MAP_MAX_PIXELS_Y - 4) / (GRID_MAX_POINTS_Y)) * (GRID_MAX_POINTS_Y),
+
+              pixels_per_X_mesh_pnt = x_map_pixels / (GRID_MAX_POINTS_X),
+              pixels_per_Y_mesh_pnt = y_map_pixels / (GRID_MAX_POINTS_Y),
+
+              x_offset = MAP_UPPER_LEFT_CORNER_X + 1 + (MAP_MAX_PIXELS_X - x_map_pixels - 2) / 2,
+              y_offset = MAP_UPPER_LEFT_CORNER_Y + 1 + (MAP_MAX_PIXELS_Y - y_map_pixels - 2) / 2;
+
+      // Clear the Mesh Map
+
+      if (PAGE_CONTAINS(y_offset - 2, y_offset + y_map_pixels + 4)) {
+        u8g.setColorIndex(1);  // First draw the bigger box in White so we have a border around the mesh map box
+        u8g.drawBox(x_offset - 2, y_offset - 2, x_map_pixels + 4, y_map_pixels + 4);
+        if (PAGE_CONTAINS(y_offset, y_offset + y_map_pixels)) {
+          u8g.setColorIndex(0);  // Now actually clear the mesh map box
+          u8g.drawBox(x_offset, y_offset, x_map_pixels, y_map_pixels);
+        }
+      }
+
+      // Display Mesh Point Locations
+
+      u8g.setColorIndex(1);
+      const uint8_t sx = x_offset + pixels_per_X_mesh_pnt / 2;
+            uint8_t  y = y_offset + pixels_per_Y_mesh_pnt / 2;
+      for (uint8_t j = 0; j < GRID_MAX_POINTS_Y; j++, y += pixels_per_Y_mesh_pnt)
+        if (PAGE_CONTAINS(y, y))
+          for (uint8_t i = 0, x = sx; i < GRID_MAX_POINTS_X; i++, x += pixels_per_X_mesh_pnt)
+            u8g.drawBox(sx, y, 1, 1);
+
+      // Fill in the Specified Mesh Point
+
+      uint8_t inverted_y = GRID_MAX_POINTS_Y - y_plot - 1;  // The origin is typically in the lower right corner.  We need to
+                                                            // invert the Y to get it to plot in the right location.
+
+      const uint8_t by = y_offset + inverted_y * pixels_per_Y_mesh_pnt;
+      if (PAGE_CONTAINS(by, by + pixels_per_Y_mesh_pnt))
+        u8g.drawBox(
+          x_offset + x_plot * pixels_per_X_mesh_pnt, by,
+          pixels_per_X_mesh_pnt, pixels_per_Y_mesh_pnt
+        );
+
+      // Put Relevant Text on Display
+
+      // Show X and Y positions at top of screen
+      u8g.setColorIndex(1);
+      if (PAGE_UNDER(7)) {
+        u8g.setPrintPos(5, 7);
+        lcd_print("X:");
+        lcd_print(ftostr32(LOGICAL_X_POSITION(pgm_read_float(&ubl._mesh_index_to_xpos[x_plot]))));
+        u8g.setPrintPos(74, 7);
+        lcd_print("Y:");
+        lcd_print(ftostr32(LOGICAL_Y_POSITION(pgm_read_float(&ubl._mesh_index_to_ypos[y_plot]))));
+      }
+
+      // Print plot position
+      if (PAGE_CONTAINS(64 - (INFO_FONT_HEIGHT - 1), 64)) {
+        u8g.setPrintPos(5, 64);
+        lcd_print('(');
+        u8g.print(x_plot);
+        lcd_print(',');
+        u8g.print(y_plot);
+        lcd_print(')');
+
+        // Show the location value
+        u8g.setPrintPos(74, 64);
+        lcd_print("Z:");
+        if (!isnan(ubl.z_values[x_plot][y_plot]))
+          lcd_print(ftostr43sign(ubl.z_values[x_plot][y_plot]));
+        else
+          lcd_printPGM(PSTR(" -----"));
+      }
+
+    }
+
+  #endif // AUTO_BED_LEVELING_UBL
 
 #endif // ULTIPANEL
 
