@@ -473,21 +473,21 @@ void GcodeSuite::G33() {
                   #else
                     (1.00 + r_diff * 0.001)                          //1.02 for r_diff = 20mm
                   #endif
-                    / (iterations == 1 ? 9.0 : 6.00),                //slow down on 1st iteration
+                    / (iterations == 1 ? 9.0 : 6.0),                 //slow down on 1st iteration
                   r_factor =
                   #ifdef R_FACTOR
                     -(R_FACTOR)                                      //set in Configuration.h
                   #else
                     -(1.75 + 0.005 * r_diff + 0.001 * sq(r_diff))    //2.25 for r_diff = 20mm
                   #endif
-                    / (iterations == 1 ? 9.0 : 6.00),                //slow down on 1st iteration
+                    / (iterations == 1 ? 9.0 : 6.0),                 //slow down on 1st iteration
                   a_factor =
                   #ifdef A_FACTOR
                     (A_FACTOR)                                       //set in Configuration.h
                   #else
                     (66.66 / delta_calibration_radius)               //0.83 for cal_rd = 80mm
                   #endif
-                    / (iterations == 1 ? 4.5 : 2.00);                //slow down on 1st iteration
+                    / (iterations == 1 ? 9.0 : 6.0);                 //slow down on 1st iteration
 
       #define ZP(N,I) ((N) * z_at_pt[I])
       #define Z6(I) ZP(6, I)
@@ -531,9 +531,9 @@ void GcodeSuite::G33() {
           r_delta         = (Z6(0) - Z1(1) - Z1(5) - Z1(9) - Z1(7) - Z1(11) - Z1(3)) * r_factor;
 
           if (towers_set) {
-            t_delta[A_AXIS] = (       - Z2(5) + Z2(9)         - Z2(11) + Z2(3)) * a_factor;
-            t_delta[B_AXIS] = ( Z2(1)         - Z2(9) + Z2(7)          - Z2(3)) * a_factor;
-            t_delta[C_AXIS] = (-Z2(1) + Z2(5)         - Z2(7) + Z2(11)        ) * a_factor;
+            t_delta[A_AXIS] = (       - Z4(5) + Z4(9)         - Z4(11) + Z4(3)) * a_factor;
+            t_delta[B_AXIS] = ( Z4(1)         - Z4(9) + Z4(7)          - Z4(3)) * a_factor;
+            t_delta[C_AXIS] = (-Z4(1) + Z4(5)         - Z4(7) + Z4(11)        ) * a_factor;
             e_delta[A_AXIS] += (t_delta[B_AXIS] - t_delta[C_AXIS]) / 4.5;
             e_delta[B_AXIS] += (t_delta[C_AXIS] - t_delta[A_AXIS]) / 4.5;
             e_delta[C_AXIS] += (t_delta[A_AXIS] - t_delta[B_AXIS]) / 4.5;
