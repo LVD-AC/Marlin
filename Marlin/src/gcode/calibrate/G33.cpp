@@ -51,7 +51,7 @@
  *      P3     Probe all positions: center, towers and opposite towers. Set all.
  *      P4-P7  Probe all positions at different locations and average them.
  *
- *   X   Don't calibrate tower angle corrections
+ *   T   Don't calibrate tower angle corrections
  *
  *   Cn.nn Calibration precision; when omitted calibrates to maximum precision
  *
@@ -353,9 +353,9 @@ void GcodeSuite::G33() {
     return;
   }
 
-  const bool towers_set           = !parser.seen('X'),
-             auto_tune            = parser.seen('A'),
-             stow_after_each      = parser.seen('E'),
+  const bool towers_set           = !parser.boolval('T'),
+             auto_tune            = parser.boolval('A'),
+             stow_after_each      = parser.boolval('E'),
              _0p_calibration      = probe_points == 0,
              _1p_calibration      = probe_points == 1,
              _4p_calibration      = probe_points == 2,
@@ -467,27 +467,24 @@ void GcodeSuite::G33() {
 
       float e_delta[ABC] = { 0.0 }, r_delta = 0.0, t_delta[ABC] = { 0.0 };
       const float r_diff = delta_radius - delta_calibration_radius,
-                  h_factor =
+                  h_factor = 1 / 6.0 *
                   #ifdef H_FACTOR
-                    (H_FACTOR)                                       //set in Configuration.h
+                    (H_FACTOR),                                       //set in Configuration.h
                   #else
-                    (1.00 + r_diff * 0.001)                          //1.02 for r_diff = 20mm
+                    (1.00 + r_diff * 0.001),                          //1.02 for r_diff = 20mm
                   #endif
-                    / (iterations == 1 ? 9.0 : 6.0),                 //slow down on 1st iteration
-                  r_factor =
+                  r_factor = 1 / 6.0 *
                   #ifdef R_FACTOR
-                    -(R_FACTOR)                                      //set in Configuration.h
+                    -(R_FACTOR),                                      //set in Configuration.h
                   #else
-                    -(1.75 + 0.005 * r_diff + 0.001 * sq(r_diff))    //2.25 for r_diff = 20mm
+                    -(1.75 + 0.005 * r_diff + 0.001 * sq(r_diff)),    //2.25 for r_diff = 20mm
                   #endif
-                    / (iterations == 1 ? 9.0 : 6.0),                 //slow down on 1st iteration
-                  a_factor =
+                  a_factor = 1 / 6.0 *
                   #ifdef A_FACTOR
-                    (A_FACTOR)                                       //set in Configuration.h
+                    (A_FACTOR);                                       //set in Configuration.h
                   #else
-                    (66.66 / delta_calibration_radius)               //0.83 for cal_rd = 80mm
+                    (66.66 / delta_calibration_radius);               //0.83 for cal_rd = 80mm
                   #endif
-                    / (iterations == 1 ? 9.0 : 6.0);                 //slow down on 1st iteration
 
       #define ZP(N,I) ((N) * z_at_pt[I])
       #define Z6(I) ZP(6, I)
