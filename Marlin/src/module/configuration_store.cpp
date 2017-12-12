@@ -251,6 +251,10 @@ void MarlinSettings::postprocess() {
     //set_bed_leveling_enabled(leveling_is_on);
   #endif
 
+  #if ENABLED(DELTA_AUTO_CALIBRATION)
+    refresh_delta_auto_cal();
+  #endif
+
   #if HAS_MOTOR_CURRENT_PWM
     stepper.refresh_motor_power();
   #endif

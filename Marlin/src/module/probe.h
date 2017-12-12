@@ -40,6 +40,10 @@
   #define STOW_PROBE()
 #endif
 
+#if ENABLED(DELTA_AUTO_CALIBRATION)
+  extern void refresh_delta_auto_cal();
+#endif
+
 #if HAS_Z_SERVO_ENDSTOP
   extern const int z_servo_angle[2];
   void servo_probe_init();
